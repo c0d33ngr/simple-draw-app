@@ -2,6 +2,10 @@
 
 A basic web-based drawing application that allows users to draw on a canvas with different colors and brush sizes.
 
+## Live Demo
+
+You can try the app live at: [https://stirring-meringue-fdc427.netlify.app/](https://stirring-meringue-fdc427.netlify.app/)
+
 ## Features
 
 *   **Drawing:** Draw lines on the canvas with your mouse.

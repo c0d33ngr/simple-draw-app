@@ -13,6 +13,23 @@ let isErasing = false;
 let lastX = 0;
 let lastY = 0;
 
+// Set initial canvas size and on resize
+function resizeCanvas() {
+    const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+    const container = canvas.parentElement;
+    canvas.width = container.clientWidth;
+    // Calculate height based on a 4:3 aspect ratio
+    canvas.height = canvas.width * 0.75;
+    ctx.putImageData(imageData, 0, 0);
+    // Re-apply line settings after resize
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    updateBrushSize();
+}
+
+window.addEventListener('resize', resizeCanvas);
+
+
 ctx.lineCap = 'round';
 ctx.lineJoin = 'round';
 
@@ -95,5 +112,6 @@ saveBtn.addEventListener('click', () => {
     link.click();
 });
 
-// Initialize brush size
+// Initialize
+resizeCanvas();
 updateBrushSize();

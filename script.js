@@ -21,30 +21,55 @@ function updateBrushSize() {
     brushSizeValue.textContent = brushSize.value;
 }
 
-brushSize.addEventListener('input', updateBrushSize);
+function getCoords(e) {
+    if (e.touches && e.touches.length > 0) {
+        const rect = canvas.getBoundingClientRect();
+        return [e.touches[0].clientX - rect.left, e.touches[0].clientY - rect.top];
+    }
+    return [e.offsetX, e.offsetY];
+}
+
+function startDrawing(e) {
+    isDrawing = true;
+    [lastX, lastY] = getCoords(e);
+}
 
 function draw(e) {
     if (!isDrawing) return;
+    e.preventDefault(); // Prevent scrolling on mobile
+
+    const [currentX, currentY] = getCoords(e);
+
     if (isErasing) {
-        ctx.strokeStyle = '#ffffff';
+        ctx.strokeStyle = '#ffffff'; // Use white for erasing
     } else {
         ctx.strokeStyle = colorPicker.value;
     }
+
     ctx.beginPath();
     ctx.moveTo(lastX, lastY);
-    ctx.lineTo(e.offsetX, e.offsetY);
+    ctx.lineTo(currentX, currentY);
     ctx.stroke();
-    [lastX, lastY] = [e.offsetX, e.offsetY];
+
+    [lastX, lastY] = [currentX, currentY];
 }
 
-canvas.addEventListener('mousedown', (e) => {
-    isDrawing = true;
-    [lastX, lastY] = [e.offsetX, e.offsetY];
-});
+function stopDrawing() {
+    isDrawing = false;
+}
 
+// Mouse event listeners
+canvas.addEventListener('mousedown', startDrawing);
 canvas.addEventListener('mousemove', draw);
-canvas.addEventListener('mouseup', () => isDrawing = false);
-canvas.addEventListener('mouseout', () => isDrawing = false);
+canvas.addEventListener('mouseup', stopDrawing);
+canvas.addEventListener('mouseout', stopDrawing);
+
+// Touch event listeners
+canvas.addEventListener('touchstart', startDrawing);
+canvas.addEventListener('touchmove', draw);
+canvas.addEventListener('touchend', stopDrawing);
+
+brushSize.addEventListener('input', updateBrushSize);
 
 clearBtn.addEventListener('click', () => {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -53,11 +78,13 @@ clearBtn.addEventListener('click', () => {
 eraserBtn.addEventListener('click', () => {
     isErasing = !isErasing;
     eraserBtn.textContent = isErasing ? 'Brush' : 'Eraser';
+    eraserBtn.classList.toggle('active', isErasing);
 });
 
-colorPicker.addEventListener('change', () => {
+colorPicker.addEventListener('input', () => {
     isErasing = false;
     eraserBtn.textContent = 'Eraser';
+    eraserBtn.classList.remove('active');
 });
 
 saveBtn.addEventListener('click', () => {

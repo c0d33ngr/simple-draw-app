@@ -7,28 +7,87 @@ const brushSize = document.getElementById('brushSize');
 const brushSizeValue = document.getElementById('brushSizeValue');
 const eraserBtn = document.getElementById('eraserBtn');
 const saveBtn = document.getElementById('saveBtn');
+const undoBtn = document.getElementById('undoBtn');
+const redoBtn = document.getElementById('redoBtn');
 
 let isDrawing = false;
 let isErasing = false;
 let lastX = 0;
 let lastY = 0;
 
+let historyStack = [];
+let redoStack = [];
+
+// --- History Management ---
+function saveState() {
+    redoStack = []; // Clear redo stack on new action
+    historyStack.push(canvas.toDataURL());
+    updateUndoRedoButtons();
+}
+
+function restoreState(dataURL) {
+    const img = new Image();
+    img.onload = () => {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        ctx.drawImage(img, 0, 0);
+    };
+    img.src = dataURL;
+}
+
+function updateUndoRedoButtons() {
+    undoBtn.disabled = historyStack.length <= 1;
+    redoBtn.disabled = redoStack.length === 0;
+}
+
+function undo() {
+    if (historyStack.length > 1) {
+        redoStack.push(historyStack.pop());
+        restoreState(historyStack[historyStack.length - 1]);
+        updateUndoRedoButtons();
+    }
+}
+
+function redo() {
+    if (redoStack.length > 0) {
+        const nextState = redoStack.pop();
+        historyStack.push(nextState);
+        restoreState(nextState);
+        updateUndoRedoButtons();
+    }
+}
+
+undoBtn.addEventListener('click', undo);
+redoBtn.addEventListener('click', redo);
+
 // Set initial canvas size and on resize
 function resizeCanvas() {
-    const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
     const container = canvas.parentElement;
-    canvas.width = container.clientWidth;
-    // Calculate height based on a 4:3 aspect ratio
+    const tempCanvas = document.createElement('canvas');
+    const tempCtx = tempCanvas.getContext('2d');
+    tempCanvas.width = canvas.width;
+    tempCanvas.height = canvas.height;
+    if (canvas.width > 0 && canvas.height > 0) {
+        tempCtx.drawImage(canvas, 0, 0);
+    }
+
+    canvas.width = Math.min(container.clientWidth, 800); // Max width
     canvas.height = canvas.width * 0.75;
-    ctx.putImageData(imageData, 0, 0);
-    // Re-apply line settings after resize
+
+    ctx.drawImage(tempCanvas, 0, 0, canvas.width, canvas.height);
+
+    // Clear history as old states have wrong dimensions
+    historyStack = [];
+    redoStack = [];
+    saveState(); // Save the resized drawing as the new initial state
+    updateUndoRedoButtons();
+
+    // Re-apply settings
     ctx.lineCap = 'round';
     ctx.lineJoin = 'round';
     updateBrushSize();
 }
 
 window.addEventListener('resize', resizeCanvas);
-
 
 ctx.lineCap = 'round';
 ctx.lineJoin = 'round';
@@ -39,8 +98,8 @@ function updateBrushSize() {
 }
 
 function getCoords(e) {
+    const rect = canvas.getBoundingClientRect();
     if (e.touches && e.touches.length > 0) {
-        const rect = canvas.getBoundingClientRect();
         return [e.touches[0].clientX - rect.left, e.touches[0].clientY - rect.top];
     }
     return [e.offsetX, e.offsetY];
@@ -72,7 +131,10 @@ function draw(e) {
 }
 
 function stopDrawing() {
-    isDrawing = false;
+    if (isDrawing) {
+        isDrawing = false;
+        saveState();
+    }
 }
 
 // Mouse event listeners
@@ -90,6 +152,7 @@ brushSize.addEventListener('input', updateBrushSize);
 
 clearBtn.addEventListener('click', () => {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
+    saveState();
 });
 
 eraserBtn.addEventListener('click', () => {
